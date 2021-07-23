@@ -8,8 +8,7 @@ import (
 	"sync"
 	"time"
 
-	atgain60 "github.com/byuoitav/atlona/AT-GAIN-60"
-	"github.com/byuoitav/atlona/AT-OME-PS62"
+	viadriver "github.com/byuoitav/kramer-driver"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/spf13/pflag"
@@ -36,44 +35,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	switchers := &sync.Map{}
-	amps := &sync.Map{}
+	vias := &sync.Map{}
 
 	cfg := zap.NewProductionConfig()
 	cfg.Level.SetLevel(zapcore.DebugLevel)
 	zapLog, _ := cfg.Build()
 
 	handlers := Handlers{
-		CreateVideoSwitcher: func(addr string) *atomeps62.AtlonaVideoSwitcher6x2 {
+		CreateServer: func(addr string) *viadriver.Via {
 			if vs, ok := switchers.Load(addr); ok {
-				return vs.(*atomeps62.AtlonaVideoSwitcher6x2)
+				return vs.(*viadriver.Via)
 			}
 
-			vs := &atomeps62.AtlonaVideoSwitcher6x2{
-				Address:      addr,
-				Username:     username,
-				Password:     password,
-				RequestDelay: 500 * time.Millisecond,
+			v := &viadriver.Via{
+				Address:  addr,
+				Username: username,
+				Password: password,
+				Logger:   zapLog,
 			}
 
-			switchers.Store(addr, vs)
-			return vs
-		},
-		CreateAmp: func(addr string) *atgain60.Amp {
-			if amp, ok := amps.Load(addr); ok {
-				return amp.(*atgain60.Amp)
-			}
-
-			amp := &atgain60.Amp{
-				Address:      addr,
-				Username:     username,
-				Password:     password,
-				Log:          zapLog.Named(addr),
-				RequestDelay: 500 * time.Millisecond,
-			}
-
-			amps.Store(addr, amp)
-			return amp
+			vias.Store(addr, v)
+			return v
 		},
 	}
 
