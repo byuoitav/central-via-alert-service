@@ -42,3 +42,8 @@ func longWords(s string, maxlength int) (string, string) {
 
 	return best, message
 }
+
+// Logic needed to interate over the message to separate at 140 characters as long as it is a space.
+// If not, I need to walk it back to find the last space.
+// Can I split on spaces and add it as part of longWords since I am already rebuilding the string already....
+// Sounds like a good plan to me.
