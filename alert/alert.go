@@ -1,4 +1,4 @@
-package emergResp
+package alert
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 )
 
 func SendMessage(m string) {
-	// Sending a message to all the VIAs
+	// Pull in a message to send
 	message := m
+
 }

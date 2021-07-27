@@ -1,304 +1,98 @@
 package main
 
 import (
-	"context"
+	//"context"
 	"fmt"
-	"log"
+	//"log"
 	"net/http"
-	"os"
-	"strconv"
-	"time"
+	//"os"
+	//"strconv"
+	//"time"
 
-	"github.com/byuoitav/common/status"
+	message "github.com/byuoitav/central-via-alert-service/message"
 	viadriver "github.com/byuoitav/kramer-driver"
 	"github.com/labstack/echo"
 )
 
 type Handlers struct {
-	CreateServer func(string) *viakramer.Via
+	CreateServer func(string) *viadriver.Via
 }
 
 func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
-	// Endpoint for sending messages to all devices
+	// Production Endpoint for sending messages to all devices
 	e.POST("/emessage/all", func(c echo.Context) error {
 		// pull the message from the request
 		messages := echo.Map{}
 
 		err := c.Bind(&messages)
 		if err != nil {
-			l.Printf("No message received: %s", err)
+			fmt.Printf("No message received: %s", err)
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
-		// Get all the VIA's in the database
+		// TODO Transform message into an array of messages if needs be
 
-		vs := h.CreateVideoSwitcher(addr)
-		l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
+		// TODO Get all the VIA's in the database and dump to array
 
-		l.Printf("Getting inputs")
+		// TODO Interate oer list of VIAs and executing against each one
 
-		inputs, err := vs.AudioVideoInputs(c.Request().Context())
-		if err != nil {
-			l.Printf("unable to get inputs: %s", err)
-			return c.String(http.StatusInternalServerError, err.Error())
-		}
+		// TODO Go routine for executing against a large list of sadness
 
-		out := c.Param("output")
-		in, ok := inputs[out]
-		if !ok {
-			l.Printf("invalid output %q requested", out)
-			return c.String(http.StatusBadRequest, "invalid output")
-		}
+		// TODO Return status
 
-		l.Printf("Got inputs: %+v", inputs)
-		return c.JSON(http.StatusOK, status.Input{
-			Input: fmt.Sprintf("%v:%v", in, out),
-		})
+		return c.JSON(http.StatusOK, fmt.Sprintf("Still implementing endpoint"))
+
 	})
-	// Endpoint for testing
+
+	// Test Endpoint against larger test group
 	e.POST("/emessage/test", func(c echo.Context) error {
-		addr := c.Param("address")
-		vs := h.CreateVideoSwitcher(addr)
-		l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
+		return c.JSON(http.StatusOK, fmt.Sprintf("Still implementing endpoint"))
 
-		l.Printf("Getting volumes")
-
-		vols, err := vs.Volumes(c.Request().Context(), []string{})
-		if err != nil {
-			l.Printf("unable to get volumes: %s", err)
-			return c.String(http.StatusInternalServerError, err.Error())
-		}
-
-		block := c.Param("block")
-		vol, ok := vols[block]
-		if !ok {
-			l.Printf("invalid block %q requested", block)
-			return c.String(http.StatusBadRequest, "invalid block")
-		}
-
-		l.Printf("Got volumes: %+v", vols)
-		return c.JSON(http.StatusOK, status.Volume{
-			Volume: vol,
-		})
 	})
+
 	// Endpoint for testing just against ITB-1106
 	e.POST("/emessage/1106", func(c echo.Context) error {
-		addr := c.Param("address")
-		vs := h.CreateVideoSwitcher(addr)
-		l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
+		alert := make(map[string]interface{})
 
-		l.Printf("Getting mutes")
+		// Largest size of a word that can be displayed before being broken into multiple words
+		maxlength := 23
 
-		mutes, err := vs.Mutes(c.Request().Context(), []string{})
+		// Largest size a message can be before being broken into multiple messages
+		maxSize := 140
+
+		err := c.Bind(&alert)
 		if err != nil {
-			l.Printf("unable to get mutes: %s", err)
+			fmt.Printf("No message received: %s\n", err)
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
+		alertmess := alert["message"].(string)
 
-		block := c.Param("block")
-		mute, ok := mutes[block]
-		if !ok {
-			l.Printf("invalid block %q requested", block)
-			return c.String(http.StatusBadRequest, "invalid block")
-		}
+		fmt.Printf("Received Message: %s\n", alertmess)
 
-		l.Printf("Got mutes: %+v", mutes)
-		return c.JSON(http.StatusOK, status.Mute{
-			Muted: mute,
-		})
+		// shorten any string down to below a character threshood.
+		wordshorten := message.LongWords(alertmess, maxlength)
+
+		// break longer messages down into smaller groups
+		alerts := message.WordChunks(wordshorten, maxSize)
+		fmt.Printf("Message: %v\n", alerts)
+		// Send the message to ITB-1106-GO1
+		// Go Routine which every VIA will end up using
+
+		fmt.Printf("1106 Endpoint Used")
+		return c.JSON(http.StatusOK, fmt.Sprintf("Message: %v\n", alerts))
+
 	})
 
 	// Get all the Buildings in the database
 	e.GET("/emessage/buildings", func(c echo.Context) error {
-		addr := c.Param("address")
-		vs := h.CreateVideoSwitcher(addr)
-		l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
-		out := c.Param("output")
-		in := c.Param("input")
+		fmt.Printf("Getting a list of all the buildings on campus")
+		return c.JSON(http.StatusOK, fmt.Sprintf("Still implementing endpoint"))
 
-		l.Printf("Setting AV input on %q to %q", out, in)
-
-		err := vs.SetAudioVideoInput(c.Request().Context(), out, in)
-		if err != nil {
-			l.Printf("unable to set AV input: %s", err)
-			return c.String(http.StatusInternalServerError, err.Error())
-		}
-
-		l.Printf("Set AV input")
-		return c.JSON(http.StatusOK, status.Input{
-			Input: fmt.Sprintf("%v:%v", in, out),
-		})
 	})
 
 	// Endpoint for executing against a single building
 	e.POST("/emessage/bldg/:bldg", func(c echo.Context) error {
-		addr := c.Param("address")
-		vs := h.CreateVideoSwitcher(addr)
-		l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
-		block := c.Param("block")
-
-		vol, err := strconv.Atoi(c.Param("volume"))
-		if err != nil {
-			return c.String(http.StatusBadRequest, err.Error())
-		}
-
-		l.Printf("Setting volume on %q to %d", block, vol)
-
-		err = vs.SetVolume(c.Request().Context(), block, vol)
-		if err != nil {
-			l.Printf("unable to set volume: %s", err)
-			return c.String(http.StatusInternalServerError, err.Error())
-		}
-
-		l.Printf("Set volume")
-		return c.JSON(http.StatusOK, status.Volume{
-			Volume: vol,
-		})
+		fmt.Printf("Blinded by the torch light!")
+		return c.JSON(http.StatusOK, fmt.Sprintf("Blinded by the torch light!!!!!!"))
 	})
-	/*
-		ps62.GET("/block/:block/muted/:mute", func(c echo.Context) error {
-			addr := c.Param("address")
-			vs := h.CreateVideoSwitcher(addr)
-			l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
-			block := c.Param("block")
-
-			mute, err := strconv.ParseBool(c.Param("mute"))
-			if err != nil {
-				return c.String(http.StatusBadRequest, err.Error())
-			}
-
-			l.Printf("Setting mute on %q to %t", block, mute)
-
-			err = vs.SetMute(c.Request().Context(), block, mute)
-			if err != nil {
-				l.Printf("unable to set mute: %s", err)
-				return c.String(http.StatusInternalServerError, err.Error())
-			}
-
-			l.Printf("Set mute")
-			return c.JSON(http.StatusOK, status.Mute{
-				Muted: mute,
-			})
-		})
-
-		gain60 := group.Group("/AT-GAIN-60/:address")
-
-		// get state
-		gain60.GET("/block/:block/volume", func(c echo.Context) error {
-			addr := c.Param("address")
-			amp := h.CreateAmp(addr)
-			l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
-
-			l.Printf("Getting volumes")
-
-			ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
-			defer cancel()
-
-			vols, err := amp.Volumes(ctx, []string{})
-			if err != nil {
-				l.Printf("unable to get volumes: %s", err)
-				return c.String(http.StatusInternalServerError, err.Error())
-			}
-
-			l.Printf("Got volumes: %+v", vols)
-
-			block := c.Param("block")
-			vol, ok := vols[block]
-			if !ok {
-				l.Printf("invalid block %q requested", block)
-				return c.String(http.StatusBadRequest, "invalid block")
-			}
-
-			return c.JSON(http.StatusOK, status.Volume{
-				Volume: vol,
-			})
-		})
-
-		gain60.GET("/block/:block/muted", func(c echo.Context) error {
-			addr := c.Param("address")
-			amp := h.CreateAmp(addr)
-			l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
-
-			l.Printf("Getting mutes")
-
-			ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
-			defer cancel()
-
-			mutes, err := amp.Mutes(ctx, []string{})
-			if err != nil {
-				l.Printf("unable to get mutes: %s", err)
-				return c.String(http.StatusInternalServerError, err.Error())
-			}
-
-			l.Printf("Got mutes: %+v", mutes)
-
-			block := c.Param("block")
-			mute, ok := mutes[block]
-			if !ok {
-				l.Printf("invalid block %q requested", block)
-				return c.String(http.StatusBadRequest, "invalid block")
-			}
-
-			return c.JSON(http.StatusOK, status.Mute{
-				Muted: mute,
-			})
-		})
-
-		// set state
-		gain60.GET("/block/:block/volume/:volume", func(c echo.Context) error {
-			addr := c.Param("address")
-			amp := h.CreateAmp(addr)
-			l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
-			block := c.Param("block")
-
-			vol, err := strconv.Atoi(c.Param("volume"))
-			if err != nil {
-				return c.String(http.StatusBadRequest, err.Error())
-			}
-
-			l.Printf("Setting volume on %q to %d", block, vol)
-
-			ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
-			defer cancel()
-
-			err = amp.SetVolume(ctx, block, vol)
-			if err != nil {
-				l.Printf("unable to set volume: %s", err)
-				return c.String(http.StatusInternalServerError, err.Error())
-			}
-
-			l.Printf("Set volume")
-			return c.JSON(http.StatusOK, status.Volume{
-				Volume: vol,
-			})
-		})
-
-		gain60.GET("/block/:block/muted/:mute", func(c echo.Context) error {
-			addr := c.Param("address")
-			amp := h.CreateAmp(addr)
-			l := log.New(os.Stderr, fmt.Sprintf("[%v] ", addr), log.Ldate|log.Ltime|log.Lmicroseconds)
-			block := c.Param("block")
-
-			mute, err := strconv.ParseBool(c.Param("mute"))
-			if err != nil {
-				return c.String(http.StatusBadRequest, err.Error())
-			}
-
-			l.Printf("Setting mute on %q to %t", block, mute)
-
-			ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
-			defer cancel()
-
-			err = amp.SetMute(ctx, block, mute)
-			if err != nil {
-				l.Printf("unable to set mute: %s", err)
-				return c.String(http.StatusInternalServerError, err.Error())
-			}
-
-			l.Printf("Set mute")
-			return c.JSON(http.StatusOK, status.Mute{
-				Muted: mute,
-			})
-		})
-	*/
 }
