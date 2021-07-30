@@ -1,9 +1,12 @@
 package comms
 
 import (
+	"encoding/json"
 	"fmt"
 	"http"
 	"strings"
+	"sync"
+	"time"
 )
 
 type displays struct {
@@ -13,8 +16,26 @@ type displays struct {
 	blanked bool   `json: "blanked"`
 }
 
+type AlertMessage struct {
+	Message string `json: "message"`
+}
+
+func worker(wg *sync.WaitGroup, m []string, alert_via string, contenttype string) {
+	defer wg.Done()
+	var alertMessage AlertMessage
+
+	for range time.Tick(time.Second * 10) {
+		for _, part := range m {
+			alertMessage.Message = m
+			req := json.Marshal(alertMessage)
+			resp, err := http.Post(alert_url, contenttype, req)
+		}
+	}
+}
+
 func SendMessage(m []string, via string) {
 	var systems Systems
+	var wg sync.WaitGroup
 
 	fmt.Println("Sending Message Abroad...Ready.........")
 
@@ -25,22 +46,27 @@ func SendMessage(m []string, via string) {
 	room := bldg + room_num
 	cp := bldg + room_num + "CP1"
 
-	// Build ye the url
-	url := "http://" + cp + "8000/buildings/" + bldg + "/rooms/" + room_num
+	// Build ye the status url
+	status_url := "http://" + cp + ":8000/buildings/" + bldg + "/rooms/" + room_num
+
+	// Build ye the via url
+	alert_url := "http://" + cp + ":8058/" + via + "alert/message"
 
 	// get current status of the room
-	resp, err := http.Get(url)
+	resp, err := http.Get(status_url)
 	if err != nil {
 		fmt.Printf("Error Getting Status: %v\n", err.Error())
 	}
 
+	defer resp.Body.Close()
+
+	status, err := io.ReadAll(resp.Body)
+
 	// Save that for later (It will become important)
-	orig := resp
+	orig := status
 
 	// Get all of the displays in the room and reconfigure the json and reassert
-	rdisp := json.unmarshal(resp)
-
-	err = json.Unmarshal(rdisp, &systems)
+	err = json.Unmarshal(status, &systems)
 	if err != nil {
 		fmt.Printf("Error in unmarshalling json: %v\n", err.Error())
 		return
@@ -76,9 +102,20 @@ func SendMessage(m []string, via string) {
 		fmt.Printf("Error in Marshal: %v\n", err.Error())
 	}
 
+	contenttype := "application/json"
+
 	// Send Body to system
+	req, err := http.Put(status_url, contenttype, bytes.NewBuffer(body))
+	if err != nil {
+		fmt.Printf("Error in Posting Content")
+	}
 
 	// Send the alert messages to the VIA1
+	for i := 0; i < 1; i++ {
+		fmt.Println("Starting worker")
+		wg.Add(1)
+		go worker(&wg, m, alert_url, contenttype)
+	}
 	// Loop over and over for the next 5 minutes
 	// Reset the room back to the original room status
 
