@@ -1,39 +1,93 @@
 package comms
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"http"
+	"io"
+	"net/http"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
 
+type Systems struct {
+	Displays []struct {
+		Name    string `json: "name"`
+		Power   string `json: "power"`
+		Input   string `json: "input,omitempty"`
+		Blanked bool   `json: "blanked"`
+	} `json: "displays"`
+	AudioDevices []struct {
+		Name   string `json: "name"`
+		Power  string `json: "power,omitempty"`
+		Input  string `json: "input,omitempty"`
+		Muted  bool   `json: "muted,omitempty"`
+		Volume int    `json: "volume"`
+	} `json: "audioDevices"`
+}
+
+/*
 type displays struct {
 	name    string `json: "name"`
 	power   string `json: "power"`
 	input   string `json: "input"`
 	blanked bool   `json: "blanked"`
 }
-
+*/
 type AlertMessage struct {
 	Message string `json: "message"`
 }
 
-func worker(wg *sync.WaitGroup, m []string, alert_via string, contenttype string) {
+func worker(wg *sync.WaitGroup, m []string, alert_url string, contenttype string) {
 	defer wg.Done()
 	var alertMessage AlertMessage
 
-	for range time.Tick(time.Second * 10) {
+	for range time.Tick(time.Second * 5) {
 		for _, part := range m {
-			alertMessage.Message = m
-			req := json.Marshal(alertMessage)
-			resp, err := http.Post(alert_url, contenttype, req)
+			fmt.Printf("Text: %v\n", part)
+			alertMessage.Message = part
+			req, _ := json.Marshal(alertMessage)
+			//resp, err := http.Post(alert_url, contenttype, bytes.NewBuffer(req))
+			reqType := "POST"
+			resp, err := SendRequest(reqType, alert_url, req)
+			if err != nil {
+				fmt.Printf("Error: %v\n", err.Error())
+			}
+			s := string([]byte(resp))
+			fmt.Printf("Worker Response: %v\n", s)
+			time.Sleep(time.Second * 5)
 		}
 	}
 }
 
-func SendMessage(m []string, via string) {
+func SendRequest(rtype string, url string, body []byte) ([]byte, error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(rtype, url, bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("Error Sending Request to System: %v\n", err.Error())
+	}
+
+	defer req.Body.Close()
+
+	done, _ := io.ReadAll(resp.Body)
+	s := string([]byte(done))
+	fmt.Printf("Response: %v\n", s)
+
+	return done, nil
+
+}
+
+/*
+func SendGet () {
+
+}
+*/
+func SendMessage(m []string, via string) error {
 	var systems Systems
 	var wg sync.WaitGroup
 
@@ -43,19 +97,20 @@ func SendMessage(m []string, via string) {
 	split := strings.Split(via, "-")
 	bldg := split[0]
 	room_num := split[1]
-	room := bldg + room_num
-	cp := bldg + room_num + "CP1"
+	//room := bldg + room_num
+	cp := bldg + "-" + room_num + "-" + "CP1"
 
 	// Build ye the status url
 	status_url := "http://" + cp + ":8000/buildings/" + bldg + "/rooms/" + room_num
 
 	// Build ye the via url
-	alert_url := "http://" + cp + ":8058/" + via + "alert/message"
+	alert_url := "http://" + cp + ":8058/" + via + "/alert/message"
 
 	// get current status of the room
 	resp, err := http.Get(status_url)
 	if err != nil {
-		fmt.Printf("Error Getting Status: %v\n", err.Error())
+		fmt.Sprintf("Error Getting Status: %v\n", err.Error())
+		return err
 	}
 
 	defer resp.Body.Close()
@@ -69,7 +124,7 @@ func SendMessage(m []string, via string) {
 	err = json.Unmarshal(status, &systems)
 	if err != nil {
 		fmt.Printf("Error in unmarshalling json: %v\n", err.Error())
-		return
+		return err
 	}
 
 	// Find all the Displays in the room
@@ -103,20 +158,42 @@ func SendMessage(m []string, via string) {
 	}
 
 	contenttype := "application/json"
+	reqType := "PUT"
 
 	// Send Body to system
-	req, err := http.Put(status_url, contenttype, bytes.NewBuffer(body))
+	//req, err := http.Post(status_url, contenttype, bytes.NewBuffer(body))
+	//req, err := SendPut(status_url, bytes.NewBuffer(body))
+	sr, err := SendRequest(reqType, status_url, body)
 	if err != nil {
 		fmt.Printf("Error in Posting Content")
 	}
 
+	//defer req.Body.Close()
+	//done, _ := io.ReadAll(req.Body)
+	s := string([]byte(sr))
+	fmt.Printf("Main body Response: %v\n", s)
+
 	// Send the alert messages to the VIA1
+	// Loop over and over for the next 5 minutes - logic in comms
 	for i := 0; i < 1; i++ {
 		fmt.Println("Starting worker")
 		wg.Add(1)
 		go worker(&wg, m, alert_url, contenttype)
 	}
-	// Loop over and over for the next 5 minutes
+
 	// Reset the room back to the original room status
+	final, err := http.Post(status_url, contenttype, bytes.NewBuffer(orig))
+	if err != nil {
+		fmt.Sprintf("Error Getting Status: %v\n", err.Error())
+		return err
+	}
+
+	defer final.Body.Close()
+
+	status, err = io.ReadAll(final.Body)
+
+	fmt.Printf("Finishing Output: %v\n", status)
+
+	return nil
 
 }

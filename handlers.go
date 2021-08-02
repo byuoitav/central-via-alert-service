@@ -9,6 +9,7 @@ import (
 	//"strconv"
 	//"time"
 
+	comms "github.com/byuoitav/central-via-alert-service/comms"
 	message "github.com/byuoitav/central-via-alert-service/message"
 	viadriver "github.com/byuoitav/kramer-driver"
 	"github.com/labstack/echo"
@@ -65,7 +66,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			fmt.Printf("No message received: %s\n", err)
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
-		alertmess := alert["message"].(string)
+		alertmess := alert["Message"].(string)
 
 		fmt.Printf("Received Message: %s\n", alertmess)
 
@@ -75,10 +76,15 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		// break longer messages down into smaller groups
 		alerts := message.WordChunks(wordshorten, maxSize)
 		fmt.Printf("Message: %v\n", alerts)
+
 		// Send the message to ITB-1106-GO1
 		// Go Routine which every VIA will end up using
+		err = comms.SendMessage(alerts, "ITB-1106-VIA1.byu.edu")
+		if err != nil {
+			fmt.Printf("Error: %v\n", err.Error())
+		}
 
-		fmt.Printf("1106 Endpoint Used")
+		fmt.Printf("1106 Endpoint Used\n")
 		return c.JSON(http.StatusOK, fmt.Sprintf("Message: %v\n", alerts))
 
 	})
