@@ -41,23 +41,56 @@ type AlertMessage struct {
 }
 
 func worker(wg *sync.WaitGroup, m []string, alert_url string, contenttype string) {
+	// After 10 minutes - Stop the function and exit
+	timer := time.After(10 * time.Minute)
+	fmt.Printf("Alert URL: %v\n", alert_url)
 	defer wg.Done()
 	var alertMessage AlertMessage
 
 	for range time.Tick(time.Second * 5) {
-		for _, part := range m {
-			fmt.Printf("Text: %v\n", part)
-			alertMessage.Message = part
-			req, _ := json.Marshal(alertMessage)
-			//resp, err := http.Post(alert_url, contenttype, bytes.NewBuffer(req))
-			reqType := "POST"
-			resp, err := SendRequest(reqType, alert_url, req)
-			if err != nil {
-				fmt.Printf("Error: %v\n", err.Error())
+		for {
+			select {
+			case <-timer:
+				fmt.Printf("Worker has finished based on Timer")
+				return
+			default:
+				for _, part := range m {
+					fmt.Printf("Text: %v\n", part)
+					alertMessage.Message = part
+					req, err := json.Marshal(alertMessage)
+					fmt.Println(string(req))
+					if err != nil {
+						fmt.Printf("JSON Marshal did not work")
+					}
+					//resp, err := http.Post(alert_url, contenttype, bytes.NewBuffer(req))
+					reqType := "POST"
+					resp, err := SendRequest(reqType, alert_url, req)
+					if err != nil {
+						fmt.Printf("Error: %v\n", err.Error())
+					}
+					s := string([]byte(resp))
+					fmt.Printf("Worker Response: %v\n", s)
+					time.Sleep(time.Second * 5)
+
+				}
 			}
-			s := string([]byte(resp))
-			fmt.Printf("Worker Response: %v\n", s)
-			time.Sleep(time.Second * 5)
+			/*
+				for range time.Tick(time.Second * 5) {
+					for _, part := range m {
+						fmt.Printf("Text: %v\n", part)
+						alertMessage.Message = part
+						req, _ := json.Marshal(alertMessage)
+						//resp, err := http.Post(alert_url, contenttype, bytes.NewBuffer(req))
+						reqType := "POST"
+						resp, err := SendRequest(reqType, alert_url, req)
+						if err != nil {
+							fmt.Printf("Error: %v\n", err.Error())
+						}
+						s := string([]byte(resp))
+						fmt.Printf("Worker Response: %v\n", s)
+						time.Sleep(time.Second * 5)
+
+			*/
 		}
 	}
 }
@@ -65,10 +98,17 @@ func worker(wg *sync.WaitGroup, m []string, alert_url string, contenttype string
 func SendRequest(rtype string, url string, body []byte) ([]byte, error) {
 	client := &http.Client{}
 
+	fmt.Printf("I AM HERE!")
+
 	req, err := http.NewRequest(rtype, url, bytes.NewBuffer(body))
+	if err != nil {
+		fmt.Printf("I am going to lose my job: %v\n", err.Error())
+
+	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Printf("Error on Client: %v\n", err.Error())
 		return nil, fmt.Errorf("Error Sending Request to System: %v\n", err.Error())
 	}
 
