@@ -5,6 +5,7 @@ import (
 	"fmt"
 	//"log"
 	"net/http"
+	"strconv"
 	//"os"
 	//"strconv"
 	//"time"
@@ -52,7 +53,15 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 	})
 
 	// Endpoint for testing just against ITB-1106
-	e.POST("/emessage/1106", func(c echo.Context) error {
+	e.POST("/emessage/timer/:timing/via/:vianame", func(c echo.Context) error {
+		t := c.Param("timing")
+		via := c.Param("vianame")
+
+		alert_time, err := strconv.Atoi(t)
+		if err != nil {
+			fmt.Errorf("Error Converting string to int")
+		}
+
 		alert := make(map[string]interface{})
 
 		// Largest size of a word that can be displayed before being broken into multiple words
@@ -61,7 +70,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		// Largest size a message can be before being broken into multiple messages
 		maxSize := 140
 
-		err := c.Bind(&alert)
+		err = c.Bind(&alert)
 		if err != nil {
 			fmt.Printf("No message received: %s\n", err)
 			return c.String(http.StatusInternalServerError, err.Error())
@@ -79,12 +88,12 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		// Send the message to ITB-1106-GO1
 		// Go Routine which every VIA will end up using
-		err = comms.SendMessage(alerts, "ITB-1106-VIA1.byu.edu")
+		err = comms.SendMessage(alerts, via, alert_time)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err.Error())
 		}
 
-		fmt.Printf("1106 Endpoint Used\n")
+		fmt.Printf("Single Endpoint Used: %v\n", via)
 		return c.JSON(http.StatusOK, fmt.Sprintf("Message: %v\n", alerts))
 
 	})
