@@ -74,3 +74,8 @@ func WordChunks(s string, chunkSize int) []string {
 	}
 	return messchunks
 }
+
+// Take and transform message into smaller arrays and fix longer words.  This takes all the other functions in the file and puts them together into one call.
+func Transform(alert []interface{}) []string {
+
+}

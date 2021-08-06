@@ -16,6 +16,11 @@ import (
 	"github.com/labstack/echo"
 )
 
+const (
+	MaxLength = 23
+	MaxSize   = 140
+)
+
 type Handlers struct {
 	CreateServer func(string) *viadriver.Via
 }
@@ -23,7 +28,10 @@ type Handlers struct {
 func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 	// Production Endpoint for sending messages to all devices
-	e.POST("/emessage/all", func(c echo.Context) error {
+	e.POST("/emessage/timer/:timing/all", func(c echo.Context) error {
+		t := c.Param("timing")
+		alert_time, err := strconv.Atoi(t)
+
 		// pull the message from the request
 		messages := echo.Map{}
 
@@ -52,7 +60,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 	})
 
-	// Endpoint for testing just against ITB-1106
+	// Endpoint for testing just against a single
 	e.POST("/emessage/timer/:timing/via/:vianame", func(c echo.Context) error {
 		t := c.Param("timing")
 		via := c.Param("vianame")
@@ -64,26 +72,24 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		alert := make(map[string]interface{})
 
-		// Largest size of a word that can be displayed before being broken into multiple words
-		maxlength := 23
-
-		// Largest size a message can be before being broken into multiple messages
-		maxSize := 140
-
 		err = c.Bind(&alert)
 		if err != nil {
 			fmt.Printf("No message received: %s\n", err)
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
+
+		// Move this logic to the message.go file
+		me := message.Transform(alert)
+
 		alertmess := alert["Message"].(string)
 
 		fmt.Printf("Received Message: %s\n", alertmess)
 
 		// shorten any string down to below a character threshood.
-		wordshorten := message.LongWords(alertmess, maxlength)
+		wordshorten := message.LongWords(alertmess, MaxLength)
 
 		// break longer messages down into smaller groups
-		alerts := message.WordChunks(wordshorten, maxSize)
+		alerts := message.WordChunks(wordshorten, MaxSize)
 		fmt.Printf("Message: %v\n", alerts)
 
 		// Send the message to ITB-1106-GO1
@@ -101,8 +107,8 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 	// Get all the Buildings in the database
 	e.GET("/emessage/buildings", func(c echo.Context) error {
 		fmt.Printf("Getting a list of all the buildings on campus")
-		return c.JSON(http.StatusOK, fmt.Sprintf("Still implementing endpoint"))
 
+		return c.JSON(http.StatusOK, fmt.Sprintf("Still implementing endpoint"))
 	})
 
 	// Endpoint for executing against a single building
