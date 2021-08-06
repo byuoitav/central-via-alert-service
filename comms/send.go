@@ -28,19 +28,11 @@ type Systems struct {
 	} `json: "audioDevices"`
 }
 
-/*
-type displays struct {
-	name    string `json: "name"`
-	power   string `json: "power"`
-	input   string `json: "input"`
-	blanked bool   `json: "blanked"`
-}
-*/
 type AlertMessage struct {
 	Message string `json: "message"`
 }
 
-func worker(wg *sync.WaitGroup, m []string, alert_url string, contenttype string, alert_time int) {
+func worker(wg *sync.WaitGroup, m []string, status_url string, alert_url string, reset_url string, contenttype string, alert_time int, orig []uint8) {
 	// After 10 minutes - Stop the function and exit
 	timing := time.Duration(alert_time)
 	timer := time.After(timing * time.Minute)
@@ -53,11 +45,30 @@ func worker(wg *sync.WaitGroup, m []string, alert_url string, contenttype string
 			select {
 			case <-timer:
 				fmt.Printf("Worker has finished based on Timer")
-				// reset the VIA to clear the alert
-				//
+				reqType := "PUT"
+
+				// Reset the VIA to clear the alert
+				_, err := http.Get(reset_url)
+				if err != nil {
+					fmt.Printf("Error sending reset command: %v\n", err.Error())
+				}
+
+				time.Sleep(10 * time.Second)
+
+				// Return system back to original state
+				// Reset the room back to the original room status
+				final, err := SendRequest(reqType, status_url, orig)
+				if err != nil {
+					fmt.Printf("Error Getting Status: %v\n", err.Error())
+				}
+				f := string([]byte(final))
+				fmt.Printf("Finishing Output: %v\n", f)
+
 				return
+
 			default:
 				for _, part := range m {
+					// build the alert message to send
 					fmt.Printf("Text: %v\n", part)
 					alertMessage.Message = part
 					req, err := json.Marshal(alertMessage)
@@ -65,11 +76,12 @@ func worker(wg *sync.WaitGroup, m []string, alert_url string, contenttype string
 					if err != nil {
 						fmt.Printf("JSON Marshal did not work")
 					}
-					//resp, err := http.Post(alert_url, contenttype, bytes.NewBuffer(req))
+
+					// Send Alert Message to the VIA
 					reqType := "POST"
 					resp, err := SendRequest(reqType, alert_url, req)
 					if err != nil {
-						fmt.Printf("Error: %v\n", err.Error())
+						fmt.Printf("Error sending alert to via: %v\n", err.Error())
 					}
 					s := string([]byte(resp))
 					fmt.Printf("Worker Response: %v\n", s)
@@ -125,11 +137,6 @@ func SendRequest(rtype string, url string, body []byte) ([]byte, error) {
 
 }
 
-/*
-func SendGet () {
-
-}
-*/
 func SendMessage(m []string, via string, alert_time int) error {
 	var systems Systems
 	var wg sync.WaitGroup
@@ -143,15 +150,20 @@ func SendMessage(m []string, via string, alert_time int) error {
 	//room := bldg + room_num
 	cp := bldg + "-" + room_num + "-" + "CP1"
 	fmt.Println(cp)
-	// fully qualify
+	// fully qualify domain name for each VIA
 	vn := via + ".byu.edu"
-	// Build ye the status url
+
+	// Build ye all of the urls
+	// Status URL
 	status_url := "http://" + cp + ":8000/buildings/" + bldg + "/rooms/" + room_num
 
 	fmt.Println(status_url)
 
-	// Build ye the via url
+	// Alert url
 	alert_url := "http://" + cp + ":8058/" + vn + "/alert/message"
+
+	// Reset url
+	reset_url := "http://" + cp + ":8058/" + vn + "/reset"
 
 	fmt.Println(alert_url)
 
@@ -168,6 +180,7 @@ func SendMessage(m []string, via string, alert_time int) error {
 
 	// Save that for later (It will become important)
 	orig := status
+	fmt.Printf("The Type of orig is: %T\n", orig)
 
 	// Get all of the displays in the room and reconfigure the json and reassert
 	err = json.Unmarshal(status, &systems)
@@ -210,15 +223,11 @@ func SendMessage(m []string, via string, alert_time int) error {
 	reqType := "PUT"
 
 	// Send command to power devices and switch to VIA
-	//req, err := http.Post(status_url, contenttype, bytes.NewBuffer(body))
-	//req, err := SendPut(status_url, bytes.NewBuffer(body))
 	sr, err := SendRequest(reqType, status_url, body)
 	if err != nil {
 		fmt.Printf("Error in Posting Content")
 	}
 
-	//defer req.Body.Close()
-	//done, _ := io.ReadAll(req.Body)
 	s := string([]byte(sr))
 	fmt.Printf("Main body Response: %v\n", s)
 
@@ -227,20 +236,8 @@ func SendMessage(m []string, via string, alert_time int) error {
 	for i := 0; i < 1; i++ {
 		fmt.Println("Starting worker")
 		wg.Add(1)
-		go worker(&wg, m, alert_url, contenttype, alert_time)
+		go worker(&wg, m, status_url, alert_url, reset_url, contenttype, alert_time, orig)
 	}
-
-	wg.Wait()
-
-	// Reset the room back to the original room status
-	//final, err := http.Post(status_url, contenttype, bytes.NewBuffer(orig))
-	final, err := SendRequest(reqType, status_url, orig)
-	if err != nil {
-		fmt.Sprintf("Error Getting Status: %v\n", err.Error())
-		return err
-	}
-	f := string([]byte(final))
-	fmt.Printf("Finishing Output: %v\n", f)
 
 	return nil
 
