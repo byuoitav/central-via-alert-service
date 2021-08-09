@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+const (
+	MaxLength = 23
+	MaxSize   = 140
+)
+
 // A small genius little bit of code found on our friend - StackOverFlow
 // Takes and chunks larger things into smaller things
 func Chunks(s string, chunkSize int) []string {
@@ -76,6 +81,14 @@ func WordChunks(s string, chunkSize int) []string {
 }
 
 // Take and transform message into smaller arrays and fix longer words.  This takes all the other functions in the file and puts them together into one call.
-func Transform(alert []interface{}) []string {
+func Transform(alertmess string) []string {
+	// shorten any string down to below a character threshood.
+	wordshorten := LongWords(alertmess, MaxLength)
 
+	// break longer messages down into smaller groups
+	alerts := WordChunks(wordshorten, MaxSize)
+
+	fmt.Printf("Message: %v\n", alerts)
+
+	return alerts
 }

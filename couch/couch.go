@@ -2,6 +2,7 @@ package couch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,10 +15,14 @@ type Documents struct {
 }
 
 func NewClient(ctx context.Context, user string, pass string, url string) (*kivik.Client, error) {
+	shortDuration := 10 * time.Second
+	d := time.Now().Add(shortDuration)
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+	defer cancel()
 	client, err := kivik.New("couch", url)
 	if err != nil {
 		errs := fmt.Sprintf("Error creating Couch Client: %w\n", err.Error())
-		return nil, errs
+		return nil, errors.New(errs)
 	}
 
 	err = client.Authenticate(ctx, couchdb.BasicAuth(user, pass))
@@ -29,7 +34,7 @@ func NewClient(ctx context.Context, user string, pass string, url string) (*kivi
 	return client, nil
 }
 
-func Devices(ctx context.Context, client *kivik.Client) (devices, error) {
+func Devices(ctx context.Context, client *kivik.Client) ([]string, error) {
 	var documents []string
 
 	devices := client.DB(ctx, "devices") // connect to the devices database on couch
@@ -39,10 +44,10 @@ func Devices(ctx context.Context, client *kivik.Client) (devices, error) {
 	// Building Query for finding all the VIAs in the database
 	query := map[string]interface{}{
 		"fields": []string{"_id"},
-		"limit":  10,
+		"limit":  2000,
 		"selector": map[string]interface{}{
 			"_id": map[string]interface{}{
-				"$regex": "VIA",
+				"$regex": "VIA1",
 			},
 		},
 	}
@@ -57,7 +62,7 @@ func Devices(ctx context.Context, client *kivik.Client) (devices, error) {
 	rows, err := devices.Find(ctx, query)
 	if err != nil {
 		err_out := fmt.Sprintf("Sorry, I failed: %w", err.Error())
-		return nil, err_out
+		return nil, errors.New(err_out)
 	}
 	fmt.Printf("What is the length: %v\n", rows.TotalRows)
 	for rows.Next() {

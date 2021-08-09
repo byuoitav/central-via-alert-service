@@ -147,9 +147,11 @@ func SendMessage(m []string, via string, alert_time int) error {
 	split := strings.Split(via, "-")
 	bldg := split[0]
 	room_num := split[1]
+
 	//room := bldg + room_num
 	cp := bldg + "-" + room_num + "-" + "CP1"
 	fmt.Println(cp)
+
 	// fully qualify domain name for each VIA
 	vn := via + ".byu.edu"
 

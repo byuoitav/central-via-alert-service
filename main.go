@@ -8,13 +8,20 @@ import (
 	"sync"
 	//"time"
 
-	viadriver "github.com/byuoitav/kramer-driver"
+	//viadriver "github.com/byuoitav/kramer-driver"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+type AlertServer struct {
+	Address  string
+	Username string
+	Password string
+	Logger   *zap.SugaredLogger
+}
 
 func main() {
 	var (
@@ -25,8 +32,8 @@ func main() {
 	)
 
 	pflag.IntVarP(&port, "port", "P", 8080, "port to run the server on")
-	pflag.StringVarP(&username, "username", "u", "", "username for device")
-	pflag.StringVarP(&password, "password", "p", "", "password for device")
+	pflag.StringVarP(&username, "username", "u", "", "username for database")
+	pflag.StringVarP(&password, "password", "p", "", "password for database")
 	pflag.Int8VarP(&logLevel, "log-level", "L", 0, "Level to log at. Provided by zap logger: https://godoc.org/go.uber.org/zap/zapcore")
 	pflag.Parse()
 
@@ -71,27 +78,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	vias := &sync.Map{}
+	alertService := &sync.Map{}
 
 	handlers := Handlers{
-		CreateServer: func(addr string) *viadriver.Via {
-			if vs, ok := vias.Load(addr); ok {
-				return vs.(*viadriver.Via)
+		CreateServer: func(addr string) *AlertServer {
+			if vs, ok := alertService.Load(addr); ok {
+				return vs.(*AlertServer)
 			}
 
-			v := &viadriver.Via{
+			v := &AlertServer{
 				Address:  addr,
 				Username: username,
 				Password: password,
 				Logger:   sugared,
 			}
 
-			vias.Store(addr, v)
+			alertService.Store(addr, v)
 			return v
 		},
 	}
 
 	e := echo.New()
+
 	e.Pre(middleware.RemoveTrailingSlash())
 
 	api := e.Group("/api/v1")
