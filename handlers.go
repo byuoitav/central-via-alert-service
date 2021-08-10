@@ -41,12 +41,14 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		ctx, cancel := context.WithDeadline(context.Background(), d)
 		defer cancel()
 
+		// Create a new client for connecting to the production couch database
 		client, err := couch.NewClient(ctx, u, p, "https://couchdb-prd.avs.byu.edu")
 		if err != nil {
 			fmt.Printf("Error: %v\n", err.Error())
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
+		// Get all of the first VIAs in each room
 		devices, err := couch.Devices(ctx, client)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err.Error())
@@ -72,7 +74,9 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		me := message.Transform(alertmess)
 
 		for _, dev := range devices {
-			go test(dev, me)
+			go func(dev string, me []string) {
+				test(dev, me)
+			}(dev, me)
 		}
 
 		// Send the message to the specified VIA
@@ -98,6 +102,8 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 	// Test Endpoint against larger test group
 	e.POST("/emessage/test", func(c echo.Context) error {
+		// Test group? ITB? JKB? TLRB? JFSB? Ye olden
+
 		return c.JSON(http.StatusOK, fmt.Sprintf("Still implementing endpoint"))
 
 	})
