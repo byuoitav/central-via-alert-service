@@ -17,6 +17,11 @@ import (
 	"github.com/labstack/echo"
 )
 
+func test(via string, message []string) {
+	fmt.Printf("VIA to Execute: %v\n", via)
+	fmt.Printf("Message: %v\n", message)
+}
+
 type Handlers struct {
 	CreateServer func(string) *AlertServer
 }
@@ -25,9 +30,10 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 	// Production Endpoint for sending messages to all devices
 	e.POST("/emessage/timer/:timing/all", func(c echo.Context) error {
-		build := h.CreateServer(addr)
-		u := h.CreateServer("username")
-		p := c.Param("password")
+		//t := c.Param("timing")
+		build := h.CreateServer("all")
+		u := build.Username
+		p := build.Password
 		fmt.Printf("Username: %v\n", u)
 
 		shortDuration := 10 * time.Second
@@ -48,29 +54,45 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		}
 
 		fmt.Printf("Devices: %v\n", devices)
+
+		//alert_time, err := strconv.Atoi(t)
+
+		// pull the message from the request
+		messages := echo.Map{}
+
+		err = c.Bind(&messages)
+		if err != nil {
+			fmt.Printf("No message received: %s", err)
+			return c.String(http.StatusInternalServerError, err.Error())
+		}
+
+		alertmess := messages["Message"].(string)
+
+		// Transform the text into an array of text strings and prep for sending to VIAs
+		me := message.Transform(alertmess)
+
+		for _, dev := range devices {
+			go test(dev, me)
+		}
+
+		// Send the message to the specified VIA
+		// Go Routine when sending to more than one device
 		/*
-			t := c.Param("timing")
-			//alert_time, err := strconv.Atoi(t)
-
-			// pull the message from the request
-			messages := echo.Map{}
-
-			err = c.Bind(&messages)
+			err = comms.SendMessage(me, via, alert_time)
 			if err != nil {
-				fmt.Printf("No message received: %s", err)
-				return c.String(http.StatusInternalServerError, err.Error())
+				fmt.Printf("Error: %v\n", err.Error())
 			}
-			// TODO Transform message into an array of messages if needs be
-
-			// TODO Get all the VIA's in the database and dump to array
-
-			// TODO Interate oer list of VIAs and executing against each one
-
-			// TODO Go routine for executing against a large list of sadness
-
-			// TODO Return status
 		*/
-		return c.JSON(http.StatusOK, fmt.Sprintf("Still implementing endpoint"))
+
+		// Get all the VIA's in the database and dump to array
+
+		// Interate oer list of VIAs and executing against each one
+
+		// TODO Go routine for executing against a large list of sadness
+
+		// TODO Return status
+
+		return c.JSON(http.StatusOK, fmt.Sprintf("Work in progress"))
 
 	})
 
