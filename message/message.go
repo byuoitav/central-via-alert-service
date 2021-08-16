@@ -63,16 +63,12 @@ func WordChunks(s string, chunkSize int) []string {
 		return []string{s}
 	}
 	var messchunks []string = make([]string, 0, (len(s)-1)/chunkSize+1)
-	//currentLen := 0
-	//currentStart := 0
 	for _, word := range strings.Split(s, " ") {
 		if len(message+word+" ") >= chunkSize {
 			messchunks = append(messchunks, message)
 			message = ""
-			fmt.Printf("len=%d cap=%d %v\n", len(messchunks), cap(messchunks), messchunks)
 		} else if word == "" {
 			messchunks = append(messchunks, message)
-			fmt.Printf("len=%d cap=%d %v\n", len(messchunks), cap(messchunks), messchunks)
 		} else {
 			message = message + word + " "
 		}
@@ -88,7 +84,7 @@ func Transform(alertmess string) []string {
 	// break longer messages down into smaller groups
 	alerts := WordChunks(wordshorten, MaxSize)
 
-	fmt.Printf("Message: %v\n", alerts)
+	//fmt.Printf("Message: %v\n", alerts)
 
 	return alerts
 }
