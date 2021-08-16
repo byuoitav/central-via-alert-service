@@ -10,6 +10,9 @@ import (
 	kivik "github.com/go-kivik/kivik/v3"
 )
 
+// type QueryString (QS) creating map so that a query parameter can be passed
+type QS map[string]interface{}
+
 type Documents struct {
 	ID string `json:"_id"`
 }
@@ -34,23 +37,12 @@ func NewClient(ctx context.Context, user string, pass string, url string) (*kivi
 	return client, nil
 }
 
-func Devices(ctx context.Context, client *kivik.Client) ([]string, error) {
+func CouchQuery(ctx context.Context, client *kivik.Client, query QS, database string) ([]string, error) {
 	var documents []string
 
-	devices := client.DB(ctx, "devices") // connect to the devices database on couch
+	devices := client.DB(ctx, database) // connect to the database of your choice on couch
 
 	fmt.Printf("Devices Output: %s\n", devices.Name())
-
-	// Building Query for finding all the VIAs in the database
-	query := map[string]interface{}{
-		"fields": []string{"_id"},
-		"limit":  2000,
-		"selector": map[string]interface{}{
-			"_id": map[string]interface{}{
-				"$regex": "VIA1",
-			},
-		},
-	}
 
 	stats, err := devices.Stats(ctx)
 	if err != nil {
@@ -75,7 +67,7 @@ func Devices(ctx context.Context, client *kivik.Client) ([]string, error) {
 		documents = append(documents, docs.ID)
 	}
 
-	fmt.Printf("Output of Documents: %v", documents)
+	fmt.Printf("Output of Documents: %v\n", documents)
 
 	return documents, nil
 }

@@ -69,7 +69,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	sugared := plain.Sugar()
+	logger := plain.Sugar()
 
 	addr := fmt.Sprintf(":%d", port)
 	lis, err := net.Listen("tcp", addr)
@@ -77,6 +77,8 @@ func main() {
 		fmt.Printf("failed to start server: %s\n", err)
 		os.Exit(1)
 	}
+
+	logger.Info("Starting Service.....")
 
 	alertService := &sync.Map{}
 
@@ -90,7 +92,7 @@ func main() {
 				Address:  addr,
 				Username: username,
 				Password: password,
-				Logger:   sugared,
+				Logger:   logger,
 			}
 
 			alertService.Store(addr, v)

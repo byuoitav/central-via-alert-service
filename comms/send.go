@@ -3,6 +3,7 @@ package comms
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
+	//"go.uber.org/zap/zapcore"
 )
 
 type Systems struct {
@@ -33,7 +37,7 @@ type AlertMessage struct {
 }
 
 func worker(wg *sync.WaitGroup, m []string, status_url string, alert_url string, reset_url string, contenttype string, alert_time int, orig []uint8) {
-	// After 10 minutes - Stop the function and exit
+	// After a determined about of time - Stop the function and exit
 	timing := time.Duration(alert_time)
 	timer := time.After(timing * time.Minute)
 	fmt.Printf("Alert URL: %v\n", alert_url)
@@ -89,35 +93,16 @@ func worker(wg *sync.WaitGroup, m []string, status_url string, alert_url string,
 
 				}
 			}
-			/*
-				for range time.Tick(time.Second * 5) {
-					for _, part := range m {
-						fmt.Printf("Text: %v\n", part)
-						alertMessage.Message = part
-						req, _ := json.Marshal(alertMessage)
-						//resp, err := http.Post(alert_url, contenttype, bytes.NewBuffer(req))
-						reqType := "POST"
-						resp, err := SendRequest(reqType, alert_url, req)
-						if err != nil {
-							fmt.Printf("Error: %v\n", err.Error())
-						}
-						s := string([]byte(resp))
-						fmt.Printf("Worker Response: %v\n", s)
-						time.Sleep(time.Second * 5)
-
-			*/
 		}
 	}
 }
 
 func SendRequest(rtype string, url string, body []byte) ([]byte, error) {
 	client := &http.Client{}
-	fmt.Println("")
-	fmt.Println(rtype)
-	fmt.Println("")
 	req, err := http.NewRequest(rtype, url, bytes.NewBuffer(body))
 	if err != nil {
-		fmt.Printf("I am going to lose my job: %v\n", err.Error())
+		errStr := fmt.Sprintf("Error creating request: %v\n", err.Error())
+		return nil, errors.New(errStr)
 
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -137,11 +122,11 @@ func SendRequest(rtype string, url string, body []byte) ([]byte, error) {
 
 }
 
-func SendMessage(m []string, via string, alert_time int) error {
+func SendMessage(m []string, via string, alert_time int, L *zap.SugaredLogger) error {
 	var systems Systems
 	var wg sync.WaitGroup
 
-	fmt.Println("Sending Message Abroad...Ready.........")
+	L.Infof("Sending Message Abroad...Ready.........")
 
 	// break down where the device lives - Room
 	split := strings.Split(via, "-")
@@ -150,7 +135,6 @@ func SendMessage(m []string, via string, alert_time int) error {
 
 	//room := bldg + room_num
 	cp := bldg + "-" + room_num + "-" + "CP1"
-	fmt.Println(cp)
 
 	// fully qualify domain name for each VIA
 	vn := via + ".byu.edu"
@@ -159,20 +143,16 @@ func SendMessage(m []string, via string, alert_time int) error {
 	// Status URL
 	status_url := "http://" + cp + ":8000/buildings/" + bldg + "/rooms/" + room_num
 
-	fmt.Println(status_url)
-
 	// Alert url
 	alert_url := "http://" + cp + ":8058/" + vn + "/alert/message"
 
 	// Reset url
 	reset_url := "http://" + cp + ":8058/" + vn + "/reset"
 
-	fmt.Println(alert_url)
-
 	// get current status of the room
 	resp, err := http.Get(status_url)
 	if err != nil {
-		fmt.Sprintf("Error Getting Status: %v\n", err.Error())
+		L.Errorf("Error Getting Status: %v\n", err.Error())
 		return err
 	}
 
@@ -181,44 +161,39 @@ func SendMessage(m []string, via string, alert_time int) error {
 	status, err := io.ReadAll(resp.Body)
 
 	// Save that for later (It will become important)
+	// We are going to use this to restore the existing state of the room
 	orig := status
-	fmt.Printf("The Type of orig is: %T\n", orig)
 
 	// Get all of the displays in the room and reconfigure the json and reassert
 	err = json.Unmarshal(status, &systems)
 	if err != nil {
-		fmt.Printf("Error in unmarshalling json: %v\n", err.Error())
-		return err
+		errStr := fmt.Sprintf("Error in unmarshalling json: %v\n", err.Error())
+		return errors.New(errStr)
 	}
 
 	// Find all the Displays in the room
 	// Change them all to on and set them all to the VIA1
-	fmt.Printf("Displays: %v\n", systems.Displays)
+	L.Debugf("Displays: %v\n", systems.Displays)
 	fmt.Println("")
 	for i, _ := range systems.Displays {
 		systems.Displays[i].Input = "VIA1"
 		systems.Displays[i].Power = "on"
-		fmt.Printf("Display: %v\n", systems.Displays[i])
 	}
 
 	for i, _ := range systems.AudioDevices {
-		fmt.Printf("Which one is running: %v and its at index: %v\n", systems.AudioDevices[i], i)
 		re := regexp.MustCompile(`D+[0-9]+`)
 		test := re.MatchString(systems.AudioDevices[i].Name)
 		if test == true {
 			systems.AudioDevices[i].Input = "VIA1"
 			systems.AudioDevices[i].Power = "on"
-			fmt.Printf("Display: %v\n", systems.AudioDevices[i])
 		}
 	}
-
-	fmt.Printf("%v\n", systems)
-	fmt.Println("")
 
 	// build a new body to send that will turn on displays and set them to the VIA.
 	body, err := json.Marshal(systems)
 	if err != nil {
-		fmt.Printf("Error in Marshal: %v\n", err.Error())
+		errStr := fmt.Sprintf("Error in Marshal: %v\n", err.Error())
+		return errors.New(errStr)
 	}
 
 	contenttype := "application/json"
@@ -227,16 +202,17 @@ func SendMessage(m []string, via string, alert_time int) error {
 	// Send command to power devices and switch to VIA
 	sr, err := SendRequest(reqType, status_url, body)
 	if err != nil {
-		fmt.Printf("Error in Posting Content")
+		errStr := fmt.Sprintf("Error in Posting Content")
+		return errors.New(errStr)
 	}
 
 	s := string([]byte(sr))
-	fmt.Printf("Main body Response: %v\n", s)
+	L.Debugf("Main body Response: %v\n", s)
 
 	// Send the alert messages to the VIA1
 	// Loop over and over for the specified time
 	for i := 0; i < 1; i++ {
-		fmt.Println("Starting worker")
+		L.Debugf("Starting worker")
 		wg.Add(1)
 		go worker(&wg, m, status_url, alert_url, reset_url, contenttype, alert_time, orig)
 	}
