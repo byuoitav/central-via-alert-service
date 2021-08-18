@@ -28,6 +28,8 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 	// Production Endpoint for sending messages to all devices
 	e.POST("/emessage/timer/:timing/all", func(c echo.Context) error {
+		var alertmess string
+
 		t := c.Param("timing")
 		build := h.CreateServer("all")
 		u := build.Username
@@ -79,7 +81,12 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
-		alertmess := messages["Message"].(string)
+		alertmess = messages["Message"].(string)
+
+		//if alertmess, ok := messages["Message"].(string); !ok {
+		//	fmt.Printf("Message not passing")
+		//	return c.String(http.StatusInternalServerError, err.Error())
+		//}
 
 		// Transform the text into an array of text strings and prep for sending to VIAs
 		me := message.Transform(alertmess)
@@ -172,13 +179,14 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 	// Endpoint for testing just against a single via
 	e.POST("/emessage/timer/:timing/via/:vianame", func(c echo.Context) error {
+		var alertmess string
+
 		build := h.CreateServer("All")
 		L := build.Logger
-		fmt.Printf("What's My type: %T\n", L)
 		t := c.Param("timing")
 		via := c.Param("vianame")
 
-		L.Infof("Sending message to %v", via)
+		L.Info("Sending message to %v", via)
 
 		alert_time, err := strconv.Atoi(t)
 		if err != nil {
@@ -193,7 +201,24 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
-		alertmess := alert["Message"].(string)
+		L.Debug("Testing: %v", alert)
+
+		if _, ok := alert["Message"]; ok {
+			L.Debug("Message has been received properly.....")
+			alertmess = alert["Message"].(string)
+		} else {
+			L.Debug("Message not formated properly or missing")
+			mes := fmt.Sprintf("Message not formated properly or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
+
+		//if alertmess, ok := alert["Message"].(string); ok {
+		//	fmt.Printf("Message not working")
+		//}
+		//if alertmess == nil {
+		//	ErrString := fmt.Sprintf("Message Malformed - Please form message in proper format")
+		//	return c.String(http.StatusInternalServerError, ErrString)
+		//}
 
 		// Transform the text into an array of text strings and prep for sending to VIAs
 		me := message.Transform(alertmess)
@@ -202,12 +227,12 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		// Go Routine when sending to more than one device
 		err = comms.SendMessage(me, via, alert_time, L)
 		if err != nil {
-			fmt.Printf("Error: %v\n", err.Error())
+			L.Debug("Error: %v\n", err.Error())
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
-		L.Debugf("Single Endpoint Used: %v", via)
-		response := fmt.Sprintf("Single Endpoint Used: %v\n", via)
+		L.Debug("Single Endpoint Used: %v", via)
+		response := fmt.Sprintf("Single Endpoint Used: %v", via)
 		return c.JSON(http.StatusOK, response)
 
 	})
@@ -219,7 +244,6 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		u := build.Username
 		p := build.Password
 		//L := build.Logger
-		fmt.Printf("Username: %v\n", u)
 
 		// couchdb query
 		query := map[string]interface{}{

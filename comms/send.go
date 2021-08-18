@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	//"go.uber.org/zap/zapcore"
 )
 
 type Systems struct {
@@ -36,11 +35,11 @@ type AlertMessage struct {
 	Message string `json: "message"`
 }
 
-func worker(wg *sync.WaitGroup, m []string, status_url string, alert_url string, reset_url string, contenttype string, alert_time int, orig []uint8) {
+func worker(wg *sync.WaitGroup, m []string, status_url string, alert_url string, reset_url string, contenttype string, alert_time int, orig []uint8, L *zap.SugaredLogger) {
 	// After a determined about of time - Stop the function and exit
 	timing := time.Duration(alert_time)
 	timer := time.After(timing * time.Minute)
-	fmt.Printf("Alert URL: %v\n", alert_url)
+	L.Debugf("Alert URL: %v\n", alert_url)
 	defer wg.Done()
 	var alertMessage AlertMessage
 
@@ -48,13 +47,13 @@ func worker(wg *sync.WaitGroup, m []string, status_url string, alert_url string,
 		for {
 			select {
 			case <-timer:
-				fmt.Printf("Worker has finished based on Timer")
+				L.Debugf("Worker has finished based on Timer")
 				reqType := "PUT"
 
 				// Reset the VIA to clear the alert
 				_, err := http.Get(reset_url)
 				if err != nil {
-					fmt.Printf("Error sending reset command: %v\n", err.Error())
+					L.Errorf("Error sending reset command: %v\n", err.Error())
 				}
 
 				time.Sleep(10 * time.Second)
@@ -63,32 +62,32 @@ func worker(wg *sync.WaitGroup, m []string, status_url string, alert_url string,
 				// Reset the room back to the original room status
 				final, err := SendRequest(reqType, status_url, orig)
 				if err != nil {
-					fmt.Printf("Error Getting Status: %v\n", err.Error())
+					L.Errorf("Error Getting Status: %v\n", err.Error())
 				}
 				f := string([]byte(final))
-				fmt.Printf("Finishing Output: %v\n", f)
+				L.Debugf("Finishing Output: %v\n", f)
 
 				return
 
 			default:
 				for _, part := range m {
 					// build the alert message to send
-					fmt.Printf("Text: %v\n", part)
+					L.Debugf("Text: %v\n", part)
 					alertMessage.Message = part
 					req, err := json.Marshal(alertMessage)
-					fmt.Println(string(req))
+					L.Debugf(string(req))
 					if err != nil {
-						fmt.Printf("JSON Marshal did not work")
+						L.Errorf("JSON Marshal did not work")
 					}
 
 					// Send Alert Message to the VIA
 					reqType := "POST"
 					resp, err := SendRequest(reqType, alert_url, req)
 					if err != nil {
-						fmt.Printf("Error sending alert to via: %v\n", err.Error())
+						L.Errorf("Error sending alert to via: %v\n", err.Error())
 					}
 					s := string([]byte(resp))
-					fmt.Printf("Worker Response: %v\n", s)
+					L.Debugf("Worker Response: %v\n", s)
 					time.Sleep(time.Second * 5)
 
 				}
@@ -115,8 +114,6 @@ func SendRequest(rtype string, url string, body []byte) ([]byte, error) {
 	defer req.Body.Close()
 
 	done, _ := io.ReadAll(resp.Body)
-	s := string([]byte(done))
-	fmt.Printf("Response: %v\n", s)
 
 	return done, nil
 
@@ -174,7 +171,6 @@ func SendMessage(m []string, via string, alert_time int, L *zap.SugaredLogger) e
 	// Find all the Displays in the room
 	// Change them all to on and set them all to the VIA1
 	L.Debugf("Displays: %v\n", systems.Displays)
-	fmt.Println("")
 	for i, _ := range systems.Displays {
 		systems.Displays[i].Input = "VIA1"
 		systems.Displays[i].Power = "on"
@@ -214,7 +210,7 @@ func SendMessage(m []string, via string, alert_time int, L *zap.SugaredLogger) e
 	for i := 0; i < 1; i++ {
 		L.Debugf("Starting worker")
 		wg.Add(1)
-		go worker(&wg, m, status_url, alert_url, reset_url, contenttype, alert_time, orig)
+		go worker(&wg, m, status_url, alert_url, reset_url, contenttype, alert_time, orig, L)
 	}
 
 	return nil
