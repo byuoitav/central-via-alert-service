@@ -9,8 +9,10 @@ import (
 	//"time"
 
 	//viadriver "github.com/byuoitav/kramer-driver"
+	"github.com/byuoitav/auth/middleware"
+	"github.com/byuoitav/auth/wso2"
 	"github.com/labstack/echo"
-	"github.com/labstack/echo/middleware"
+	//"github.com/labstack/echo/middleware"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -104,7 +106,21 @@ func main() {
 
 	e.Pre(middleware.RemoveTrailingSlash())
 
-	api := e.Group("/api/v1")
+	// WSO2 Create Client
+	client := wso2.New("", "", "http://api.byu.edu", "")
+
+	// build the main group and pass the middleware of WSO2
+	api := e.Group(
+		"/api/v1",
+		echo.WrapMiddleware(client.JWTValidationMiddleware()),
+		func(next echo.HandlerFunc) echo.HandlerFunc {
+			if middleware.Authenticated(c.Request()) {
+				next(c)
+				return nil
+			}
+		},
+	)
+
 	handlers.RegisterRoutes(api)
 
 	log.Printf("Server started on %v", lis.Addr())
