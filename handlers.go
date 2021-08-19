@@ -73,9 +73,9 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		alert_time, err := strconv.Atoi(t)
 
 		// pull the message from the request
-		messages := echo.Map{}
+		alert := echo.Map{}
 
-		err = c.Bind(&messages)
+		err = c.Bind(&alert)
 		if err != nil {
 			fmt.Printf("No message received: %s", err)
 			return c.String(http.StatusInternalServerError, err.Error())
@@ -161,9 +161,9 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		alert_time, err := strconv.Atoi(t)
 
 		// pull the message from the request
-		messages := echo.Map{}
+		alert := echo.Map{}
 
-		err = c.Bind(&messages)
+		err = c.Bind(&alert)
 		if err != nil {
 			fmt.Printf("No message received: %s", err)
 			return c.String(http.StatusInternalServerError, err.Error())
@@ -358,9 +358,9 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		alert_time, err := strconv.Atoi(t)
 
 		// pull the message from the request
-		messages := echo.Map{}
+		alert := echo.Map{}
 
-		err = c.Bind(&messages)
+		err = c.Bind(&alert)
 		if err != nil {
 			fmt.Printf("No message received: %s", err)
 			return c.String(http.StatusInternalServerError, err.Error())
