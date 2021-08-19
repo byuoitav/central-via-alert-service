@@ -81,12 +81,23 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
-		alertmess = messages["Message"].(string)
+		L.Debug("Alert Message: ", alert)
 
-		//if alertmess, ok := messages["Message"].(string); !ok {
-		//	fmt.Printf("Message not passing")
-		//	return c.String(http.StatusInternalServerError, err.Error())
-		//}
+		// Checking the message to make sure the body is formated right so it doesn't cause issues down the line
+		if _, ok := alert["Message"]; ok {
+			L.Debug("Message has been received properly.....")
+			alertmess = alert["Message"].(string)
+		} else {
+			L.Debug("Message key not formated properly or missing, Please use Message as the key in the body")
+			mes := fmt.Sprintf("Message not formated properly or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
+
+		if alertmess == "" {
+			L.Debug("Message is blank....")
+			mes := fmt.Sprintf("Message is blank or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
 
 		// Transform the text into an array of text strings and prep for sending to VIAs
 		me := message.Transform(alertmess)
@@ -158,7 +169,23 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
-		alertmess := messages["Message"].(string)
+		L.Debug("Alert Message: ", alert)
+
+		// Checking the message to make sure the body is formated right so it doesn't cause issues down the line
+		if _, ok := alert["Message"]; ok {
+			L.Debug("Message has been received properly.....")
+			alertmess = alert["Message"].(string)
+		} else {
+			L.Debug("Message key not formated properly or missing, Please use Message as the key in the body")
+			mes := fmt.Sprintf("Message not formated properly or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
+
+		if alertmess == "" {
+			L.Debug("Message is blank....")
+			mes := fmt.Sprintf("Message is blank or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
 
 		// Transform the text into an array of text strings and prep for sending to VIAs
 		me := message.Transform(alertmess)
@@ -201,24 +228,23 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
-		L.Debug("Testing: %v", alert)
+		L.Debug("Alert Message: ", alert)
 
+		// Checking the message to make sure the body is formated right so it doesn't cause issues down the line
 		if _, ok := alert["Message"]; ok {
 			L.Debug("Message has been received properly.....")
 			alertmess = alert["Message"].(string)
 		} else {
-			L.Debug("Message not formated properly or missing")
+			L.Debug("Message key not formated properly or missing, Please use Message as the key in the body")
 			mes := fmt.Sprintf("Message not formated properly or missing")
 			return c.String(http.StatusInternalServerError, mes)
 		}
 
-		//if alertmess, ok := alert["Message"].(string); ok {
-		//	fmt.Printf("Message not working")
-		//}
-		//if alertmess == nil {
-		//	ErrString := fmt.Sprintf("Message Malformed - Please form message in proper format")
-		//	return c.String(http.StatusInternalServerError, ErrString)
-		//}
+		if alertmess == "" {
+			L.Debug("Message is blank....")
+			mes := fmt.Sprintf("Message is blank or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
 
 		// Transform the text into an array of text strings and prep for sending to VIAs
 		me := message.Transform(alertmess)
@@ -340,7 +366,23 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			return c.String(http.StatusInternalServerError, err.Error())
 		}
 
-		alertmess := messages["Message"].(string)
+		L.Debug("Alert Message: ", alert)
+
+		// Checking the message to make sure the body is formated right so it doesn't cause issues down the line
+		if _, ok := alert["Message"]; ok {
+			L.Debug("Message has been received properly.....")
+			alertmess = alert["Message"].(string)
+		} else {
+			L.Debug("Message key not formated properly or missing, Please use Message as the key in the body")
+			mes := fmt.Sprintf("Message not formated properly or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
+
+		if alertmess == "" {
+			L.Debug("Message is blank....")
+			mes := fmt.Sprintf("Message is blank or missing")
+			return c.String(http.StatusInternalServerError, mes)
+		}
 
 		// Transform the text into an array of text strings and prep for sending to VIAs
 		me := message.Transform(alertmess)
