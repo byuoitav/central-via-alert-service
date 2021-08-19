@@ -114,9 +114,12 @@ func main() {
 		"/api/v1",
 		echo.WrapMiddleware(client.JWTValidationMiddleware()),
 		func(next echo.HandlerFunc) echo.HandlerFunc {
-			if middleware.Authenticated(c.Request()) {
-				next(c)
-				return nil
+			return func(c echo.Context) error {
+				if middleware.Authenticated(c.Request()) {
+					next(c)
+					return nil
+				}
+				return c.JSON(http.StatusForbidden, map[string]string{"error": "Unauthorized"})
 			}
 		},
 	)

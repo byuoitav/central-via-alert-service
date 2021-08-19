@@ -119,6 +119,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 	e.POST("/emessage/timer/:timing/test", func(c echo.Context) error {
 		// Test group? ITB? JKB? TLRB? JFSB? Ye olden
 		t := c.Param("timing")
+		var alertmess string
 		build := h.CreateServer("all")
 		u := build.Username
 		p := build.Password
@@ -313,6 +314,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 	// Endpoint for executing against a single building
 	e.POST("/emessage/timer/:timing/building/:bldg", func(c echo.Context) error {
 		building := c.Param("bldg")
+		var alertmess string
 		t := c.Param("timing")
 		build := h.CreateServer("all")
 		u := build.Username
