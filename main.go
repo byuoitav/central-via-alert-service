@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"sync"
 	//"time"
 
-	//viadriver "github.com/byuoitav/kramer-driver"
 	"github.com/byuoitav/auth/middleware"
 	"github.com/byuoitav/auth/wso2"
 	"github.com/labstack/echo"
@@ -104,12 +104,13 @@ func main() {
 
 	e := echo.New()
 
-	e.Pre(middleware.RemoveTrailingSlash())
+	//e.Pre(middleware.RemoveTrailingSlash())
 
 	// WSO2 Create Client
 	client := wso2.New("", "", "http://api.byu.edu", "")
 
 	// build the main group and pass the middleware of WSO2
+
 	api := e.Group(
 		"/api/v1",
 		echo.WrapMiddleware(client.JWTValidationMiddleware()),
