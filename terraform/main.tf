@@ -97,21 +97,17 @@ module "prd_deployment" {
 
   // optional
   iam_policy_doc = data.aws_iam_policy_document.policy.json
-  replicas       = 3
   public_urls    = ["via-alert.av.byu.edu"]
   container_env = {
-    "AWS_BUCKET_REGION"          = aws_s3_bucket.bucket.region
-    "AWS_DEPLOYMENT_KEY"         = data.aws_ssm_parameter.deployment_key.value
     "DB_ADDRESS"                 = data.aws_ssm_parameter.prd_couch_address.value
     "DB_USERNAME"                = data.aws_ssm_parameter.prd_couch_username.value
     "DB_PASSWORD"                = data.aws_ssm_parameter.prd_couch_password.value
-    "DOCKER_GITHUB_PASSWORD"     = data.aws_ssm_parameter.docker_github_password.value
-    "DOCKER_GITHUB_USERNAME"     = data.aws_ssm_parameter.docker_github_username.value
-    "ELASTIC_API_EVENTS"         = data.aws_ssm_parameter.elk_event_api.value
-    "LDAP_PASSWORD"              = data.aws_ssm_parameter.ldap_password.value
-    "LDAP_USERNAME"              = data.aws_ssm_parameter.ldap_username.value
-    "PI_SSH_USERNAME"            = data.aws_ssm_parameter.pi_username.value
     "RASPI_DEPLOYMENT_S3_BUCKET" = aws_s3_bucket.bucket.id
     "STOP_REPLICATION"           = "true"
   }
+  container_args = [
+    "--username", data.aws_ssm_parameter.prd_couch_username.value,
+    "--password", data.aws_ssm_parameter.prd_couch_password.value,
+    "--port", "8040", 
+  ]
 }
