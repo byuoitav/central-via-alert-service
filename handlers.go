@@ -27,7 +27,7 @@ const CouchDB string = "https://couchdb-prd.avs.byu.edu"
 func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 	// Health Check Endpoint
-	e.GET("/healthz", func(c echo.Context) {
+	e.GET("/healthz", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, fmt.Sprintf("Alerts Service is running!"))
 	})
 	// Production Endpoint for sending messages to all devices
