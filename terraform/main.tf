@@ -18,7 +18,7 @@ data "aws_ssm_parameter" "eks_cluster_endpoint" {
 }
 
 provider "kubernetes" {
-  host = data.aws_ssm_parameter.eks_cluster_endpoint.value
+  host        = data.aws_ssm_parameter.eks_cluster_endpoint.value
   config_path = "~/.kube/config"
 }
 
@@ -36,16 +36,17 @@ module "prd_deployment" {
 
   // required
   name           = "central-via-alert-service"
-  image          = "byuoitav/central-via-alert-service"
-  image_version  = "latest"
+  image          = "docker.pkg.github.com/byuoitav/central-via-alert-service/central-via-alert-service-dev"
+  image_version  = "6506fb6"
   container_port = 8040
   repo_url       = "https://github.com/byuoitav/central-via-alert-service"
 
   // optional
-  public_urls    = ["via-alert.av.byu.edu"]
+  image_pull_secret = "github-docker-registry"
+  public_urls       = ["via-alert.av.byu.edu"]
   container_args = [
     "--username", data.aws_ssm_parameter.prd_couch_username.value,
     "--password", data.aws_ssm_parameter.prd_couch_password.value,
-    "--port", "8040", 
+    "--port", "8040",
   ]
 }
