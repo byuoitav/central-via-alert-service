@@ -42,7 +42,6 @@ module "prd_deployment" {
   repo_url       = "https://github.com/byuoitav/central-via-alert-service"
 
   // optional
-  iam_policy_doc = data.aws_iam_policy_document.policy.json
   public_urls    = ["via-alert.av.byu.edu"]
   container_args = [
     "--username", data.aws_ssm_parameter.prd_couch_username.value,
