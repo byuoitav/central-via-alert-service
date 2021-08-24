@@ -109,8 +109,12 @@ func main() {
 	// WSO2 Create Client
 	client := wso2.New("", "", "http://api.byu.edu", "")
 
-	// build the main group and pass the middleware of WSO2
+	e.GET("/healthz", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, fmt.Sprintf("Alerts Service is running!"))
 
+	})
+
+	// build the main group and pass the middleware of WSO2
 	api := e.Group(
 		"/api/v1",
 		echo.WrapMiddleware(client.JWTValidationMiddleware()),
