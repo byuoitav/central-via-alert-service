@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"os"
 	"sync"
+
 	//"time"
 
 	"github.com/byuoitav/auth/middleware"
 	"github.com/byuoitav/auth/wso2"
 	"github.com/labstack/echo"
+
 	//"github.com/labstack/echo/middleware"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
@@ -107,7 +109,7 @@ func main() {
 	//e.Pre(middleware.RemoveTrailingSlash())
 
 	// WSO2 Create Client
-	client := wso2.New("", "", "http://api.byu.edu", "")
+	client := wso2.New("", "", "https://api.byu.edu", "")
 
 	e.GET("/healthz", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, fmt.Sprintf("Alerts Service is running!"))
