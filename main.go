@@ -11,6 +11,7 @@ import (
 
 	"github.com/byuoitav/auth/middleware"
 	"github.com/byuoitav/auth/wso2"
+	"github.com/byuoitav/central-via-alert-service/opa"
 	"github.com/labstack/echo"
 	//"github.com/labstack/echo/middleware"
 	"github.com/spf13/pflag"
@@ -36,6 +37,7 @@ func main() {
 	pflag.IntVarP(&port, "port", "P", 8080, "port to run the server on")
 	pflag.StringVarP(&username, "username", "u", "", "username for database")
 	pflag.StringVarP(&password, "password", "p", "", "password for database")
+	pflag.StringVarP(&opaURL, "address", "a", "", "OPA Address (Full URL)")
 	pflag.Int8VarP(&logLevel, "log-level", "L", 0, "Level to log at. Provided by zap logger: https://godoc.org/go.uber.org/zap/zapcore")
 	pflag.Parse()
 
@@ -114,6 +116,10 @@ func main() {
 
 	})
 
+	o := opa.Client{
+		URL: opaURL,
+	}
+
 	// build the main group and pass the middleware of WSO2
 	api := e.Group(
 		"/api/v1",
@@ -127,6 +133,7 @@ func main() {
 				return c.JSON(http.StatusForbidden, map[string]string{"error": "Unauthorized"})
 			}
 		},
+		o.Authorize(echo.Context),
 	)
 
 	handlers.RegisterRoutes(api)
