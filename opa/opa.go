@@ -64,7 +64,7 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 
 		req, err := http.NewRequest(
 			"POST",
-			fmt.Sprintf(client.URL),
+			fmt.Sprintf("%s/v1/data/via-alerts", client.URL),
 			bytes.NewReader(oReq),
 		)
 		// req.Header.Set("authorization", fmt.Sprintf("Bearer %s", user))
