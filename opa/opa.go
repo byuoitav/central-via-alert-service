@@ -8,12 +8,13 @@ import (
 	"net/http"
 
 	"github.com/byuoitav/auth/middleware"
-	"github.com/byuoitav/common/log"
+	//"github.com/byuoitav/common/log"
 	"github.com/labstack/echo"
 )
 
 type Client struct {
-	URL string
+	URL   string
+	Token string
 }
 
 type opaResponse struct {
@@ -50,40 +51,45 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		// use either the user netid for the authorization request or an
 		// API key if one was used instead
 		if user, ok := c.Request().Context().Value("userBYUID").(string); ok {
-			opaData.Input.UserBYUID = user
-		} else {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Error while receiving authorized user from JWT")
+			opaData.Input.User = user
+			fmt.Printf("User Found")
+		} else if apiKey, ok := middleware.GetAVAPIKey(c.Request().Context()); ok {
+			opaData.Input.APIKey = apiKey
 		}
 
 		// Prep the request
 		oReq, err := json.Marshal(opaData)
 		if err != nil {
-			log.L.Errorf("Error trying to create request to OPA: %s\n", err)
+			fmt.Errorf("Error trying to create request to OPA: %s\n", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
 		req, err := http.NewRequest(
 			"POST",
-			fmt.Sprintf("%s/v1/data/via-alerts", client.URL),
+			fmt.Sprintf("%s/v1/data/viaalert", client.URL),
 			bytes.NewReader(oReq),
 		)
-		// req.Header.Set("authorization", fmt.Sprintf("Bearer %s", user))
+
+		req.Header.Set("authorization", fmt.Sprintf("Bearer %s", client.Token))
+
+		fmt.Printf("Data: %s\n", opaData)
+		fmt.Printf("URL: %s\n", client.URL)
 
 		// Make the request
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.L.Errorf("Error while making request to OPA: %s", err)
+			fmt.Printf("Error while making request to OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 		if res.StatusCode != http.StatusOK {
-			log.L.Errorf("Got back non 200 status from OPA: %d", res.StatusCode)
+			fmt.Printf("Got back non 200 status from OPA: %d", res.StatusCode)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
 		// Read the body
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			log.L.Errorf("Unable to read body from OPA: %s", err)
+			fmt.Printf("Unable to read body from OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
@@ -91,7 +97,7 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		oRes := opaResponse{}
 		err = json.Unmarshal(body, &oRes)
 		if err != nil {
-			log.L.Errorf("Unable to parse body from OPA: %s", err)
+			fmt.Printf("Unable to parse body from OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
