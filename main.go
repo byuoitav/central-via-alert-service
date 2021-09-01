@@ -8,13 +8,10 @@ import (
 	"os"
 	"sync"
 
-	//"time"
-
 	"github.com/byuoitav/auth/middleware"
 	"github.com/byuoitav/auth/wso2"
+	"github.com/byuoitav/central-via-alert-service/opa"
 	"github.com/labstack/echo"
-
-	//"github.com/labstack/echo/middleware"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -32,12 +29,16 @@ func main() {
 		port     int
 		username string
 		password string
+		opaURL   string
+		opaToken string
 		logLevel int8
 	)
 
 	pflag.IntVarP(&port, "port", "P", 8080, "port to run the server on")
 	pflag.StringVarP(&username, "username", "u", "", "username for database")
 	pflag.StringVarP(&password, "password", "p", "", "password for database")
+	pflag.StringVarP(&opaURL, "opa-address", "a", "", "OPA Address (Full URL)")
+	pflag.StringVarP(&opaToken, "opa-token", "t", "", "OPA Token")
 	pflag.Int8VarP(&logLevel, "log-level", "L", 0, "Level to log at. Provided by zap logger: https://godoc.org/go.uber.org/zap/zapcore")
 	pflag.Parse()
 
@@ -106,8 +107,6 @@ func main() {
 
 	e := echo.New()
 
-	//e.Pre(middleware.RemoveTrailingSlash())
-
 	// WSO2 Create Client
 	client := wso2.New("", "", "https://api.byu.edu", "")
 
@@ -115,6 +114,11 @@ func main() {
 		return c.JSON(http.StatusOK, fmt.Sprintf("Alerts Service is running!"))
 
 	})
+
+	o := opa.Client{
+		URL:   opaURL,
+		Token: opaToken,
+	}
 
 	// build the main group and pass the middleware of WSO2
 	api := e.Group(
@@ -126,9 +130,12 @@ func main() {
 					next(c)
 					return nil
 				}
+				logger.Info("WSO2 Authentication Failed")
+				logger.Debug("Output of JWT: %s", c.Request())
 				return c.JSON(http.StatusForbidden, map[string]string{"error": "Unauthorized"})
 			}
 		},
+		o.Authorize,
 	)
 
 	handlers.RegisterRoutes(api)
