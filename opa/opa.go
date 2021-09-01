@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/byuoitav/auth/middleware"
-	//"github.com/byuoitav/common/log"
 	"github.com/labstack/echo"
 )
 
@@ -78,18 +77,18 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		// Make the request
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			fmt.Printf("Error while making request to OPA: %s", err)
+			fmt.Errorf("Error while making request to OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 		if res.StatusCode != http.StatusOK {
-			fmt.Printf("Got back non 200 status from OPA: %d", res.StatusCode)
+			fmt.Errorf("Got back non 200 status from OPA: %d", res.StatusCode)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
 		// Read the body
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			fmt.Printf("Unable to read body from OPA: %s", err)
+			fmt.Errorf("Unable to read body from OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
@@ -97,7 +96,7 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		oRes := opaResponse{}
 		err = json.Unmarshal(body, &oRes)
 		if err != nil {
-			fmt.Printf("Unable to parse body from OPA: %s", err)
+			fmt.Errorf("Unable to parse body from OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 

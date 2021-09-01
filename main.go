@@ -7,13 +7,11 @@ import (
 	"net/http"
 	"os"
 	"sync"
-	//"time"
 
 	"github.com/byuoitav/auth/middleware"
 	"github.com/byuoitav/auth/wso2"
 	"github.com/byuoitav/central-via-alert-service/opa"
 	"github.com/labstack/echo"
-	//"github.com/labstack/echo/middleware"
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -108,8 +106,6 @@ func main() {
 	}
 
 	e := echo.New()
-
-	//e.Pre(middleware.RemoveTrailingSlash())
 
 	// WSO2 Create Client
 	client := wso2.New("", "", "https://api.byu.edu", "")
