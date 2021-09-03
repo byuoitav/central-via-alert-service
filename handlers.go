@@ -131,7 +131,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			"limit":  2000,
 			"selector": map[string]interface{}{
 				"_id": map[string]interface{}{
-					"$regex": "ITB-1106-GO1",
+					"$regex": "ITB-.*-VIA1",
 				},
 			},
 		}
