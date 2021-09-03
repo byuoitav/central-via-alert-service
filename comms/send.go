@@ -131,7 +131,7 @@ func SendMessage(m []string, via string, alert_time int, L *zap.SugaredLogger) e
 	room_num := split[1]
 
 	//room := bldg + room_num
-	cp := bldg + "-" + room_num + "-" + "CP1"
+	cp := bldg + "-" + room_num + "-" + "CP1" + ".byu.edu"
 
 	// fully qualify domain name for each VIA
 	vn := via + ".byu.edu"
