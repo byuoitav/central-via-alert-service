@@ -37,7 +37,7 @@ module "prd_deployment" {
   // required
   name           = "central-via-alert-service"
   image          = "docker.pkg.github.com/byuoitav/central-via-alert-service/central-via-alert-service-dev"
-  image_version  = "3b6550b"
+  image_version  = "a621c5b"
   container_port = 8040
   repo_url       = "https://github.com/byuoitav/central-via-alert-service"
 
