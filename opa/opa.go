@@ -49,7 +49,8 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		fmt.Printf("Context Output: %v\n", c.Request().Context())
 		// use either the user netid for the authorization request or an
 		// API key if one was used instead
-		if user, ok := c.Request().Context().Value("userBYUID").(string); ok {
+		//if user, ok := c.Request().Context().Value("userBYUID").(string); ok {
+		if user, ok := c.Request().Context().Value("user").(string); ok {
 			opaData.Input.User = user
 			fmt.Printf("User Found\n")
 		} else if apiKey, ok := middleware.GetAVAPIKey(c.Request().Context()); ok {
