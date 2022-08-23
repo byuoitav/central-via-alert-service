@@ -31,6 +31,14 @@ data "aws_ssm_parameter" "prd_couch_password" {
   name = "/env/couch-password"
 }
 
+data "aws_ssm_parameter" "opa_url" {
+  name = "/env/opa-url"
+}
+
+data "aws_ssm_parameter" "opa_token" {
+  name = "/env/viaalert/opa-token"
+}
+
 module "prd_deployment" {
   source = "github.com/byuoitav/terraform//modules/kubernetes-deployment"
 
@@ -47,6 +55,9 @@ module "prd_deployment" {
   container_args = [
     "--username", data.aws_ssm_parameter.prd_couch_username.value,
     "--password", data.aws_ssm_parameter.prd_couch_password.value,
+    "-a", data.aws_ssm_parameter.opa_url.value,
+    "-t", data.aws_ssm_parameter.opa_token.value,
     "--port", "8040",
+    "-L", "-1",
   ]
 }

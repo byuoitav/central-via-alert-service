@@ -51,7 +51,7 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		// API key if one was used instead
 		if user, ok := c.Request().Context().Value("userBYUID").(string); ok {
 			opaData.Input.User = user
-			fmt.Printf("User Found")
+			fmt.Printf("User Found\n")
 		} else if apiKey, ok := middleware.GetAVAPIKey(c.Request().Context()); ok {
 			opaData.Input.APIKey = apiKey
 		}
@@ -59,7 +59,7 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		// Prep the request
 		oReq, err := json.Marshal(opaData)
 		if err != nil {
-			fmt.Errorf("Error trying to create request to OPA: %s\n", err)
+			fmt.Printf("Error trying to create request to OPA: %s\n", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
@@ -77,18 +77,18 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		// Make the request
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
-			fmt.Errorf("Error while making request to OPA: %s", err)
+			fmt.Printf("Error while making request to OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 		if res.StatusCode != http.StatusOK {
-			fmt.Errorf("Got back non 200 status from OPA: %d", res.StatusCode)
+			fmt.Printf("Got back non 200 status from OPA: %d", res.StatusCode)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
 		// Read the body
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			fmt.Errorf("Unable to read body from OPA: %s", err)
+			fmt.Printf("Unable to read body from OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
 
@@ -96,14 +96,15 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 		oRes := opaResponse{}
 		err = json.Unmarshal(body, &oRes)
 		if err != nil {
-			fmt.Errorf("Unable to parse body from OPA: %s", err)
+			fmt.Printf("Unable to parse body from OPA: %s", err)
 			return echo.NewHTTPError(http.StatusInternalServerError, "Error while contacting authorization server")
 		}
-
+		fmt.Printf("Results: %v\n", oRes.Result)
 		// If OPA approved then allow the request, else reject with a 403
 		if oRes.Result.Allow {
 			return next(c)
 		} else {
+			fmt.Printf("Unauthorized\n")
 			return echo.NewHTTPError(http.StatusForbidden, "Unauthorized")
 		}
 	}
