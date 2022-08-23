@@ -108,7 +108,7 @@ func main() {
 	e := echo.New()
 
 	// WSO2 Create Client
-	client := wso2.New("", "", "https://api.byu.edu/", "")
+	client := wso2.New("", "", "https://api.byu.edu", "")
 
 	e.GET("/healthz", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, fmt.Sprintf("Alerts Service is running!"))
