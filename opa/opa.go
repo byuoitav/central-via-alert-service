@@ -46,7 +46,9 @@ func (client *Client) Authorize(next echo.HandlerFunc) echo.HandlerFunc {
 				Method: c.Request().Method,
 			},
 		}
-		fmt.Printf("Context Output: %v\n", c.Request().Context())
+		fmt.Printf("Context Output: %v\n", c.Request().Context().Value("user"))
+		fmt.Printf("Context Output: %v\n", c.Request().Context().Value("userBYUID"))
+
 		// use either the user netid for the authorization request or an
 		// API key if one was used instead
 		//if user, ok := c.Request().Context().Value("userBYUID").(string); ok {
