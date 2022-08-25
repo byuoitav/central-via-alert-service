@@ -49,7 +49,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		database := "devices"
 
-		shortDuration := 10 * time.Second
+		shortDuration := 30 * time.Second
 		d := time.Now().Add(shortDuration)
 		ctx, cancel := context.WithDeadline(context.Background(), d)
 		defer cancel()
@@ -131,14 +131,14 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			"limit":  2000,
 			"selector": map[string]interface{}{
 				"_id": map[string]interface{}{
-					"$regex": "ITB-.*-VIA1",
+					"$regex": "ITB-1.*-VIA1",
 				},
 			},
 		}
 
 		database := "devices"
 
-		shortDuration := 10 * time.Second
+		shortDuration := 30 * time.Second
 		d := time.Now().Add(shortDuration)
 		ctx, cancel := context.WithDeadline(context.Background(), d)
 		defer cancel()
@@ -336,7 +336,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		database := "devices"
 
-		shortDuration := 10 * time.Second
+		shortDuration := 30 * time.Second
 		d := time.Now().Add(shortDuration)
 		ctx, cancel := context.WithDeadline(context.Background(), d)
 		defer cancel()
