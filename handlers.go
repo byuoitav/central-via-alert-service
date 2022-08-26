@@ -11,18 +11,28 @@ import (
 	couch "github.com/byuoitav/central-via-alert-service/couch"
 	message "github.com/byuoitav/central-via-alert-service/message"
 	"github.com/labstack/echo"
+	"go.uber.org/zap"
 )
+
+const CouchDB string = "https://couchdb-prd.avs.byu.edu"
+
+type Handlers struct {
+	CreateServer func(string) *AlertServer
+}
 
 func test(via string, message []string) {
 	fmt.Printf("VIA to Execute: %v\n", via)
 	fmt.Printf("Message: %v\n", message)
 }
 
-type Handlers struct {
-	CreateServer func(string) *AlertServer
+func AlertAsync(alertMessage string, deviceList []string, alertTime int, L *zap.SugaredLogger) error {
+	for _, dev := range devicesList {
+		err = comms.SendMessage(me, dev, alert_time, L)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err.Error())
+		}
+	}
 }
-
-const CouchDB string = "https://couchdb-prd.avs.byu.edu"
 
 func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
@@ -49,6 +59,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		database := "devices"
 
+		// Set Deadline for pulling data from the couch database
 		shortDuration := 30 * time.Second
 		d := time.Now().Add(shortDuration)
 		ctx, cancel := context.WithDeadline(context.Background(), d)
@@ -104,14 +115,14 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		// Send the message to the specified VIA
 		// Go Routine when sending to more than one device
-		for _, dev := range devices {
-			err = comms.SendMessage(me, dev, alert_time, L)
+		go func() {
+			err = AlertAsync(me, dev, alert_time, L)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err.Error())
 			}
-		}
+		}()
 
-		return c.JSON(http.StatusOK, fmt.Sprintf("Successful Push"))
+		return c.JSON(http.StatusOK, fmt.Sprintf("Successfully Sent Message to Campus"))
 
 	})
 
@@ -193,14 +204,22 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		// Send the message to the specified VIA
 		// Go Routine when sending to more than one device
-		for _, dev := range devices {
-			err = comms.SendMessage(me, dev, alert_time, L)
+		/*
+			for _, dev := range devices {
+				err = comms.SendMessage(me, dev, alert_time, L)
+				if err != nil {
+					fmt.Printf("Error: %v\n", err.Error())
+				}
+			}
+		*/
+		go func() {
+			err = AlertAsync(me, dev, alert_time, L)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err.Error())
 			}
-		}
+		}()
 
-		response := fmt.Sprintf("Emergency Message sent to test group")
+		response := fmt.Sprintf("Successfully sent message to test group in the ITB")
 		return c.JSON(http.StatusOK, response)
 
 	})
@@ -259,7 +278,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		}
 
 		L.Debug("Single Endpoint Used: %v", via)
-		response := fmt.Sprintf("Single Endpoint Used: %v", via)
+		response := fmt.Sprintf("Sending message to single endpoint: %v", via)
 		return c.JSON(http.StatusOK, response)
 
 	})
@@ -391,13 +410,20 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 
 		// Send the message to the specified VIA
 		// Go Routine when sending to more than one device
-
-		for _, dev := range devices {
-			err = comms.SendMessage(me, dev, alert_time, L)
+		/*
+			for _, dev := range devices {
+				err = comms.SendMessage(me, dev, alert_time, L)
+				if err != nil {
+					fmt.Printf("Error: %v\n", err.Error())
+				}
+			}
+		*/
+		go func() {
+			err = AlertAsync(me, dev, alert_time, L)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err.Error())
 			}
-		}
+		}()
 
 		response := fmt.Sprintf("Sending message to building: %v", building)
 		return c.JSON(http.StatusOK, response)
