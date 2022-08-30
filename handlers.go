@@ -25,13 +25,14 @@ func test(via string, message []string) {
 	fmt.Printf("Message: %v\n", message)
 }
 
-func AlertAsync(alertMessage string, deviceList []string, alertTime int, L *zap.SugaredLogger) error {
-	for _, dev := range devicesList {
-		err = comms.SendMessage(me, dev, alert_time, L)
+func AlertAsync(alertMessage []string, deviceList []string, alertTime int, L *zap.SugaredLogger) error {
+	for _, dev := range deviceList {
+		err := comms.SendMessage(alertMessage, dev, alertTime, L)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err.Error())
 		}
 	}
+	return nil
 }
 
 func (h *Handlers) RegisterRoutes(e *echo.Group) {
@@ -116,7 +117,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 		// Send the message to the specified VIA
 		// Go Routine when sending to more than one device
 		go func() {
-			err = AlertAsync(me, dev, alert_time, L)
+			err = AlertAsync(me, devices, alert_time, L)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err.Error())
 			}
@@ -213,7 +214,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			}
 		*/
 		go func() {
-			err = AlertAsync(me, dev, alert_time, L)
+			err = AlertAsync(me, devices, alert_time, L)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err.Error())
 			}
@@ -419,7 +420,7 @@ func (h *Handlers) RegisterRoutes(e *echo.Group) {
 			}
 		*/
 		go func() {
-			err = AlertAsync(me, dev, alert_time, L)
+			err = AlertAsync(me, devices, alert_time, L)
 			if err != nil {
 				fmt.Printf("Error: %v\n", err.Error())
 			}
